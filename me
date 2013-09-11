@@ -59,13 +59,18 @@ pwd=`pwd`
 
 cd $dir
 if [ -d ".git" ]; then
-  git add $filename
-  echo -n ".git found, commit message: "
-  read commit
-  if [ "$commit" = "" ]; then
-    commit="Automatic emacs script checkin"
+  diff=`git diff $filename`
+  if [ "$diff" != "" ]; then
+    git add $filename
+    echo -n ".git found, commit message: "
+    read commit
+    if [ "$commit" = "" ]; then
+      commit="Automatic emacs script checkin"
+    fi
+    git commit -q -m "$commit"
+  else
+    echo no changes
   fi
-  git commit -q -m "$commit"
 else
   if [ "$autogit" = "1" ]; then
     git init -q
