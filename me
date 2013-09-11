@@ -1,0 +1,59 @@
+#!/bin/sh
+
+mebin=/usr/local/bin/me-bin
+restorecon=/sbin/restorecon
+getenforce=/usr/sbin/getenforce
+
+file=$1
+
+if [ "$file" == "" ]; then
+ $mebin
+ exit
+fi
+
+if [ -d "$file" ]; then
+ echo "$file is a directory, aborting.."
+ exit
+fi
+
+# Test to see if we have write permissions, then clean up
+filetest=`head /dev/urandom | md5sum | cut -f 1 -d " "`
+filetest=${file}-${filetest}
+touch $filetest >/dev/null 2>&1
+rc=$?
+if [ $rc != 0 ]; then
+        echo "Could not create $file (no permissions?)"
+        exit
+fi
+rm $filetest
+
+if [ -h "$file" ]; then
+# file=`ls -l $file | perl -e 'chomp($f=<>);($x,$f) = split("-> ",$f); print "$f";'`
+ file=`readlink -f $file`
+#echo "Symlink to $file"
+ if [ -d "$file" ]; then
+  echo "$file is a directory, aborting.."
+  exit
+ else
+  $mebin "$file"
+ fi
+else
+# echo "not symlink"
+ $mebin "$file"
+fi
+
+# If we didn't create a file, just exit
+if [ ! -f "$file" ]; then
+ exit
+fi
+
+if $getenforce | grep -q 'Enforcing\|Permissive'
+then
+# echo "SELinux enabled"
+ $restorecon "$file"
+fi
+
+#else
+# echo "SELinux disabled.."
+#fi
+
