@@ -6,6 +6,7 @@ getenforce=/usr/sbin/getenforce
 autogit=1
 
 file=$1
+originalfile=$file
 
 if [ "$file" == "" ]; then
  $mebin
@@ -28,6 +29,8 @@ if [ $rc != 0 ]; then
 	exit
 fi
 rm $filetest
+
+md5=`md5sum $originalfile`
 
 if [ -h "$file" ]; then
  file=`readlink -f $file`
@@ -52,23 +55,27 @@ then
  $restorecon "$file"
 fi
 
+# Exit if we didn't change the file at all
+new_md5=`md5sum $originalfile`
+if [ "$md5" == "$new_md5" ]; then
+  exit
+fi
+
 # If the file is in a git repo, check in the change
+# If autogit is set to 1, we automatically create the repo
 dir=`dirname $file`
 filename=`basename $file`
 pwd=`pwd`
 
 cd $dir
 if [ -d ".git" ]; then
-  diff=`git diff $filename`
-  if [ "$diff" != "" ]; then
-    git add $filename
-    echo -n ".git found, commit message: "
-    read commit
-    if [ "$commit" = "" ]; then
-      commit="Automatic emacs script checkin"
-    fi
-    git commit -q -m "$commit"
+  git add $filename
+  echo -n ".git found, commit message: "
+  read commit
+  if [ "$commit" = "" ]; then
+    commit="Automatic emacs script checkin"
   fi
+  git commit -q -m "$commit"
 else
   if [ "$autogit" = "1" ]; then
     git init -q
@@ -76,6 +83,7 @@ else
     git commit -q -m "Creating repo and adding $filename"
     cd $pwd
   else
+# If autogit=0, offer easy way to add file to a new repo
     echo "cd $dir && git init && git add $filename && git commit -m \"Adding $filename\" && cd $pwd"
   fi
 fi
