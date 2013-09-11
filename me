@@ -4,8 +4,10 @@
 # clobber symlinks), runs restorecon if selinux is enabled (some editors clobber contexts)
 # and adds the edited file to a local git repo
 
-# Bugs:  If we edit a file in a subdirectory of a git repo, we create a new git
-#        repo because the file isn't part of the main repo and no .git dir exists.
+# Warning:  If autogit=1 and no git repo is available in the current or parent
+# structure we create a new one in the same path as the file.  If you want a
+# more global repo, do git init on a higher path and files will be added to
+# that repo instead.  Example:  cd $HOME ; git init
 
 editor=/usr/local/bin/me-bin
 restorecon=/sbin/restorecon
