@@ -3,6 +3,7 @@
 mebin=/usr/local/bin/me-bin
 restorecon=/sbin/restorecon
 getenforce=/usr/sbin/getenforce
+autogit=1
 
 file=$1
 
@@ -29,9 +30,7 @@ fi
 rm $filetest
 
 if [ -h "$file" ]; then
-# file=`ls -l $file | perl -e 'chomp($f=<>);($x,$f) = split("-> ",$f); print "$f";'`
  file=`readlink -f $file`
-#echo "Symlink to $file"
  if [ -d "$file" ]; then
   echo "$file is a directory, aborting.."
   exit
@@ -39,7 +38,6 @@ if [ -h "$file" ]; then
   $mebin "$file"
  fi
 else
-# echo "not symlink"
  $mebin "$file"
 fi
 
@@ -48,13 +46,33 @@ if [ ! -f "$file" ]; then
  exit
 fi
 
+# If using selinux, restore our contexts
 if $getenforce | grep -q 'Enforcing\|Permissive'
 then
-# echo "SELinux enabled"
  $restorecon "$file"
 fi
 
-#else
-# echo "SELinux disabled.."
-#fi
+# If the file is in a git repo, check in the change
+dir=`dirname $file`
+filename=`basename $file`
+pwd=`pwd`
 
+cd $dir
+if [ -d ".git" ]; then
+  git add $filename
+  echo -n ".git found, commit message: "
+  read commit
+  if [ "$commit" = "" ]; then
+    commit="Automatic emacs script checkin"
+  fi
+  git commit -q -m "$commit"
+else
+  if [ "$autogit" = "1" ]; then
+    git init -q
+    git add $filename
+    git commit -q -m "Creating repo and adding $filename"
+    cd $pwd
+  else
+    echo "cd $dir && git init && git add $filename && git commit -m \"Adding $filename\" && cd $pwd"
+  fi
+fi
