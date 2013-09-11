@@ -1,6 +1,13 @@
 #!/bin/sh
 
-mebin=/usr/local/bin/me-bin
+# Editor wrapper script that edits the real file if the file is a symlink (some editors
+# clobber symlinks), runs restorecon if selinux is enabled (some editors clobber contexts)
+# and adds the edited file to a local git repo
+
+# Bugs:  If we edit a file in a subdirectory of a git repo, we create a new git
+#        repo because the file isn't part of the main repo and no .git dir exists.
+
+editor=/usr/local/bin/me-bin
 restorecon=/sbin/restorecon
 getenforce=/usr/sbin/getenforce
 autogit=1
@@ -9,7 +16,7 @@ file=$1
 originalfile=$file
 
 if [ "$file" == "" ]; then
- $mebin
+ $editor
  exit
 fi
 
@@ -38,10 +45,10 @@ if [ -h "$file" ]; then
   echo "$file is a directory, aborting.."
   exit
  else
-  $mebin "$file"
+  $editor "$file"
  fi
 else
- $mebin "$file"
+ $editor "$file"
 fi
 
 # If we didn't create a file, just exit
@@ -68,20 +75,29 @@ filename=`basename $file`
 pwd=`pwd`
 
 cd $dir
-if [ -d ".git" ]; then
+
+# Ask user for commit note, otherwise default to something
+function readcommit
+{
   git add $filename
-  echo -n ".git found, commit message: "
+  echo -n ".git commit message: "
   read commit
   if [ "$commit" = "" ]; then
-    commit="Automatic emacs script checkin"
+    commit="Automatic edit script commit"
   fi
   git commit -q -m "$commit"
+}
+
+# Is there a git repo here?
+git show-ref --quiet >/dev/null 2>&1
+headrc=$?
+
+if [ $headrc == 0 ]; then
+  readcommit
 else
   if [ "$autogit" = "1" ]; then
     git init -q
-    git add $filename
-    git commit -q -m "Creating repo and adding $filename"
-    cd $pwd
+    readcommit
   else
 # If autogit=0, offer easy way to add file to a new repo
     echo "cd $dir && git init && git add $filename && git commit -m \"Adding $filename\" && cd $pwd"
