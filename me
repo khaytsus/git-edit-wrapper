@@ -68,8 +68,6 @@ if [ -d ".git" ]; then
       commit="Automatic emacs script checkin"
     fi
     git commit -q -m "$commit"
-  else
-    echo no changes
   fi
 else
   if [ "$autogit" = "1" ]; then
