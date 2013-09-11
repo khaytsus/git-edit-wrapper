@@ -59,20 +59,25 @@ pwd=`pwd`
 
 cd $dir
 if [ -d ".git" ]; then
-  git add $filename
-  echo -n ".git found, commit message: "
-  read commit
-  if [ "$commit" = "" ]; then
-    commit="Automatic emacs script checkin"
-  fi
-  git commit -q -m "$commit"
-else
-  if [ "$autogit" = "1" ]; then
-    git init -q
+  diff=`git diff $filename`
+  if [ "$diff" != ""]; then
     git add $filename
-    git commit -q -m "Creating repo and adding $filename"
-    cd $pwd
+    echo -n ".git found, commit message: "
+    read commit
+    if [ "$commit" = "" ]; then
+      commit="Automatic emacs script checkin"
+    fi
+    git commit -q -m "$commit"
   else
-    echo "cd $dir && git init && git add $filename && git commit -m \"Adding $filename\" && cd $pwd"
+    if [ "$autogit" = "1" ]; then
+      git init -q
+      git add $filename
+      git commit -q -m "Creating repo and adding $filename"
+      cd $pwd
+    else
+      echo "cd $dir && git init && git add $filename && git commit -m \"Adding $filename\" && cd $pwd"
+    fi
+  else
+   echo no changes
   fi
 fi
