@@ -9,9 +9,19 @@
 # more global repo, do git init on a higher path and files will be added to
 # that repo instead.  Example:  cd $HOME ; git init
 
+# Change the editor to your intended editor..  vi, emacs, joe, whatever
+
 editor=/usr/local/bin/me-bin
+
+# If using selinux, make sure these are set to the correct path, otherwise
+# you can set them blank to disable the selinux handling
+
 restorecon=/sbin/restorecon
 getenforce=/usr/sbin/getenforce
+
+# If you want the script to automatically create a git repo if one does not
+# already exist, set this to 1
+
 autogit=1
 
 file=$1
@@ -59,9 +69,11 @@ if [ ! -f "$file" ]; then
 fi
 
 # If using selinux, restore our contexts
-if $getenforce | grep -q 'Enforcing\|Permissive'
-then
- $restorecon "$file"
+if [ -f "$getenforce" ]; then
+  if $getenforce | grep -q 'Enforcing\|Permissive'
+  then
+   $restorecon "$file"
+  fi
 fi
 
 # Exit if we didn't change the file at all
