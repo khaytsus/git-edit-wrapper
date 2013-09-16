@@ -1,4 +1,4 @@
-#!/bin/sh
+!/bin/sh
 
 # Editor wrapper script that edits the real file if the file is a symlink (some editors
 # clobber symlinks), runs restorecon if selinux is enabled (some editors clobber contexts)
@@ -75,14 +75,16 @@ fi
 dir=`dirname $file`
 filename=`basename $file`
 pwd=`pwd`
+pwd=`readlink -f $pwd`
 
 cd $dir
 
 # Ask user for commit note, otherwise default to something
 function readcommit
 {
+  gitdir=`git rev-parse --git-dir`
   git add $filename
-  echo -n ".git commit message: "
+  echo -n "[$gitdir] message: "
   read commit
   if [ "$commit" = "" ]; then
     commit="Automatic edit script commit"
@@ -91,13 +93,14 @@ function readcommit
 }
 
 # Is there a git repo here?
-git show-ref --quiet >/dev/null 2>&1
+git rev-parse --git-dir >/dev/null 2>&1
 headrc=$?
 
 if [ $headrc == 0 ]; then
   readcommit
 else
   if [ "$autogit" = "1" ]; then
+    echo "Creating new git repo in" `readlink -f $pwd`
     git init -q
     readcommit
   else
