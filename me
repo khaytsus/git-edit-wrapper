@@ -1,14 +1,34 @@
-#!/bin/sh
+!/bin/sh
 
-mebin=/usr/local/bin/me-bin
+# Editor wrapper script that edits the real file if the file is a symlink (some editors
+# clobber symlinks), runs restorecon if selinux is enabled (some editors clobber contexts)
+# and adds the edited file to a local git repo
+
+# Warning:  If autogit=1 and no git repo is available in the current or parent
+# structure we create a new one in the same path as the file.  If you want a
+# more global repo, do git init on a higher path and files will be added to
+# that repo instead.  Example:  cd $HOME ; git init
+
+# Change the editor to your intended editor..  vi, emacs, joe, whatever
+
+editor=/usr/local/bin/me-bin
+
+# If using selinux, make sure these are set to the correct path, otherwise
+# you can set them blank to disable the selinux handling
+
 restorecon=/sbin/restorecon
 getenforce=/usr/sbin/getenforce
+
+# If you want the script to automatically create a git repo if one does not
+# already exist, set this to 1
+
 autogit=1
 
 file=$1
+originalfile=$file
 
 if [ "$file" == "" ]; then
- $mebin
+ $editor
  exit
 fi
 
@@ -29,16 +49,18 @@ if [ $rc != 0 ]; then
 fi
 rm $filetest
 
+md5=`md5sum $originalfile`
+
 if [ -h "$file" ]; then
  file=`readlink -f $file`
  if [ -d "$file" ]; then
   echo "$file is a directory, aborting.."
   exit
  else
-  $mebin "$file"
+  $editor "$file"
  fi
 else
- $mebin "$file"
+ $editor "$file"
 fi
 
 # If we didn't create a file, just exit
@@ -47,37 +69,54 @@ if [ ! -f "$file" ]; then
 fi
 
 # If using selinux, restore our contexts
-if $getenforce | grep -q 'Enforcing\|Permissive'
-then
- $restorecon "$file"
+if [ -f "$getenforce" ]; then
+  if $getenforce | grep -q 'Enforcing\|Permissive'
+  then
+   $restorecon "$file"
+  fi
+fi
+
+# Exit if we didn't change the file at all
+new_md5=`md5sum $originalfile`
+if [ "$md5" == "$new_md5" ]; then
+  exit
 fi
 
 # If the file is in a git repo, check in the change
+# If autogit is set to 1, we automatically create the repo
 dir=`dirname $file`
 filename=`basename $file`
 pwd=`pwd`
+pwd=`readlink -f $pwd`
 
 cd $dir
-if [ -d ".git" ]; then
-  diff=`git diff $filename`
-  if [ "$diff" != ""]; then
-    git add $filename
-    echo -n ".git found, commit message: "
-    read commit
-    if [ "$commit" = "" ]; then
-      commit="Automatic emacs script checkin"
-    fi
-    git commit -q -m "$commit"
+
+# Ask user for commit note, otherwise default to something
+function readcommit
+{
+  gitdir=`git rev-parse --git-dir`
+  git add $filename
+  echo -n "[$gitdir] message: "
+  read commit
+  if [ "$commit" = "" ]; then
+    commit="Automatic edit script commit"
+  fi
+  git commit -q -m "$commit"
+}
+
+# Is there a git repo here?
+git rev-parse --git-dir >/dev/null 2>&1
+headrc=$?
+
+if [ $headrc == 0 ]; then
+  readcommit
+else
+  if [ "$autogit" = "1" ]; then
+    echo "Creating new git repo in" `readlink -f $pwd`
+    git init -q
+    readcommit
   else
-    if [ "$autogit" = "1" ]; then
-      git init -q
-      git add $filename
-      git commit -q -m "Creating repo and adding $filename"
-      cd $pwd
-    else
-      echo "cd $dir && git init && git add $filename && git commit -m \"Adding $filename\" && cd $pwd"
-    fi
-  else
-   echo no changes
+# If autogit=0, offer easy way to add file to a new repo
+    echo "cd $dir && git init && git add $filename && git commit -m \"Adding $filename\" && cd $pwd"
   fi
 fi
