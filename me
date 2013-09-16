@@ -51,6 +51,9 @@ rm $filetest
 
 md5=`md5sum $originalfile`
 
+# Use readlink so we're editing the original file if a symlink as some editors
+# clobber symlinks
+
 if [ -h "$file" ]; then
  file=`readlink -f $file`
  if [ -d "$file" ]; then
