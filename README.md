@@ -13,7 +13,7 @@ Hope it's useful to someone!
 
 History..
 
-I've used microEmacs since the AmigaDOS days, which was caleld the "Advanced Editor".  When I moved to
+I've used microEmacs since the AmigaDOS days, which was called the "Advanced Editor".  When I moved to
 Linux in the late 90's I quickly found microEmacs 3.12 which operated exactly the same way it did in
 AmigaDOS.  Newer versions changed some of the key sequences around so I've used the same binary for
 years now.  Problem?  Clobbers symlinks..  Clobbers selinux..  So I wrote a wrapper to work around
