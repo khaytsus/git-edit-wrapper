@@ -43,18 +43,6 @@ if [ -d "$file" ]; then
  exit
 fi
 
-# Test to see if we have write permissions, then clean up
-filetest=`head /dev/urandom | md5sum | cut -f 1 -d " "`
-filetest=${file}-${filetest}
-touch $filetest >/dev/null 2>&1
-rc=$?
-if [ $rc != 0 ]; then
-        echo "Could not create $file (no permissions?)  Using more instead"
-	more $file
-	exit
-fi
-rm $filetest
-
 # Use readlink so we're editing the original file if a symlink as some editors
 # clobber symlinks
 
@@ -65,6 +53,23 @@ dir=`dirname $file`
 filename=`basename $file`
 pwd=`pwd`
 pwd=`readlink -f $pwd`
+
+# Create a lock file to test
+
+filetest=$dir/.${filename}.lock
+
+if [ -f $filetest ]; then
+  echo "A lock file exists:  $filetest"
+  exit
+fi
+
+touch $filetest >/dev/null 2>&1
+rc=$?
+if [ $rc != 0 ]; then
+        echo "Could not create $file (no permissions?)  Using more instead"
+	more $file
+	exit
+fi
 
 function precommit
 {
@@ -94,26 +99,22 @@ function precommit
   fi
 }
 
+function cleanup
+{
+   rm $filetest
+   exit
+}
+
 # Go back to our original path for now
 cd $pwd
 
 # Edit the file
-if [ -h "$file" ]; then
- if [ -d "$file" ]; then
-  echo "$file is a directory, aborting.."
-  exit
- else
-  precommit
-  $editor "$file"
- fi
-else
- precommit
- $editor "$file"
-fi
+precommit
+$editor "$file"
 
 # If we didn't create a file, just exit
 if [ ! -f "$file" ]; then
- exit
+  cleanup
 fi
 
 # If using selinux, restore our contexts
@@ -127,7 +128,7 @@ fi
 # Exit if we didn't change the file at all
 new_md5=`md5sum $originalfile`
 if [ "$md5" == "$new_md5" ]; then
-  exit
+  cleanup
 fi
 
 # Ask user for commit note, otherwise default to something
@@ -163,3 +164,5 @@ else
     echo "cd $dir && git init && git add $filename && git commit -m \"Adding $filename\" && cd $pwd"
   fi
 fi
+
+cleanup
