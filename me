@@ -64,21 +64,30 @@ if [ -f $filetest ]; then
   exit
 fi
 
+# Test if we can write to this location/file and create a lock file
 touch $filetest >/dev/null 2>&1
 rc=$?
 if [ $rc != 0 ]; then
-        echo "Could not create $file (no permissions?)  Using more instead"
-	echo ""
-	more $file
-	exit
+  if [ -f $file ]; then
+    echo "Could not create $file (no permissions?)  Using more instead"
+    echo ""
+    more $file
+    exit
+  else
+    echo "Could not create $file (no permissions?)"
+    exit
+  fi
 fi
 
+# Function to let us commit a file before editing it if the file exists.
+# If autogit = 1 and we need to, we'll create a git repo first
 function precommit
 {
+# Need to be in the files path to test for a repo
   cd $dir
 
 # If the file exists, see if we need to check it in before editing
-  if [ -f "$file" ] && [ $precommit == 1 ]; then
+  if [ -f "$file" ] && [ "$precommit" == "1" ]; then
 
 # Get our original md5sum to test
     md5=`md5sum $originalfile`
@@ -98,16 +107,30 @@ function precommit
   fi
 }
 
+# Ask user for commit note, otherwise default to something
+function readcommit
+{
+  gitdir=`git rev-parse --git-dir`
+  git add $filename
+  echo -n "[$gitdir] message: "
+  read commit
+  if [ "$commit" == "" ]; then
+    commit="Automatic edit script commit"
+  fi
+  git commit -q -m "$commit"
+}
+
+# Clean up our lock file and exit
 function cleanup
 {
    rm $filetest
    exit
 }
 
-# Go back to our original path for now
+# Go back to our original path
 cd $pwd
 
-# Edit the file
+# Edit the file, but commit it first if we should
 precommit
 $editor "$file"
 
@@ -130,19 +153,6 @@ if [ -f "$getenforce" ]; then
   fi
 fi
 
-# Ask user for commit note, otherwise default to something
-function readcommit
-{
-  gitdir=`git rev-parse --git-dir`
-  git add $filename
-  echo -n "[$gitdir] message: "
-  read commit
-  if [ "$commit" = "" ]; then
-    commit="Automatic edit script commit"
-  fi
-  git commit -q -m "$commit"
-}
-
 # Now go back to the files full path to test for a git repo
 cd $dir
 
@@ -153,7 +163,7 @@ git rev-parse --git-dir >/dev/null 2>&1
 if [ $? == 0 ]; then
   readcommit
 else
-  if [ "$autogit" = "1" ]; then
+  if [ "$autogit" == "1" ]; then
     echo "Creating new git repo in" `readlink -f $pwd`
     git init -q
     readcommit
