@@ -1,4 +1,4 @@
-!/bin/sh
+#!/bin/sh
 
 # Editor wrapper script that edits the real file if the file is a symlink (some editors
 # clobber symlinks), runs restorecon if selinux is enabled (some editors clobber contexts)
@@ -23,6 +23,12 @@ getenforce=/usr/sbin/getenforce
 # already exist, set this to 1
 
 autogit=1
+
+# If you want the script to check in a file before editing if it already
+# exists, set this to 1
+precheckin=1
+
+### No touchy below here
 
 file=$1
 originalfile=$file
@@ -54,8 +60,35 @@ md5=`md5sum $originalfile`
 # Use readlink so we're editing the original file if a symlink as some editors
 # clobber symlinks
 
+# If the file is in a git repo, check in the change
+# If autogit is set to 1, we automatically create the repo
+file=`readlink -f $file`
+dir=`dirname $file`
+filename=`basename $file`
+pwd=`pwd`
+pwd=`readlink -f $pwd`
+
+cd $dir
+
+# Test to see if there a git repo here
+git rev-parse --git-dir >/dev/null 2>&1
+headrc=$?
+
+# If precheckin=1, check in the file before editing it
+ if [ $headrc == 0 ] && [ $precheckin == 1 ]; then
+# Make sure the file isn't already there first
+  git ls-files $filename --error-unmatch >/dev/null 2>&1
+  if [ $? != 0 ]; then
+    git add $filename >/dev/null 2>&1
+    git commit -q -m "Pre-edit commit of file" >/dev/null 2>&1
+  fi
+ fi
+exit
+# Go back to our original path for now
+cd $pwd
+
+# Edit the file
 if [ -h "$file" ]; then
- file=`readlink -f $file`
  if [ -d "$file" ]; then
   echo "$file is a directory, aborting.."
   exit
@@ -85,15 +118,6 @@ if [ "$md5" == "$new_md5" ]; then
   exit
 fi
 
-# If the file is in a git repo, check in the change
-# If autogit is set to 1, we automatically create the repo
-dir=`dirname $file`
-filename=`basename $file`
-pwd=`pwd`
-pwd=`readlink -f $pwd`
-
-cd $dir
-
 # Ask user for commit note, otherwise default to something
 function readcommit
 {
@@ -107,10 +131,10 @@ function readcommit
   git commit -q -m "$commit"
 }
 
-# Is there a git repo here?
-git rev-parse --git-dir >/dev/null 2>&1
-headrc=$?
+# Now go back to the files full path to test for a git repo
+cd $dir
 
+# Is there is a git repo here?
 if [ $headrc == 0 ]; then
   readcommit
 else
