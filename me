@@ -26,7 +26,7 @@ autogit=1
 
 # If you want the script to check in a file before editing if it already
 # exists, set this to 1
-precheckin=1
+precommit=1
 
 ### No touchy below here
 
@@ -55,8 +55,6 @@ if [ $rc != 0 ]; then
 fi
 rm $filetest
 
-md5=`md5sum $originalfile`
-
 # Use readlink so we're editing the original file if a symlink as some editors
 # clobber symlinks
 
@@ -68,22 +66,34 @@ filename=`basename $file`
 pwd=`pwd`
 pwd=`readlink -f $pwd`
 
-cd $dir
+function precommit
+{
+  cd $dir
 
-# Test to see if there a git repo here
-git rev-parse --git-dir >/dev/null 2>&1
-headrc=$?
+# If the file exists, see if we need to check it in before editing
+  if [ -f "$file" ]; then
+    md5=`md5sum $originalfile`
 
-# If precheckin=1, check in the file before editing it
- if [ $headrc == 0 ] && [ $precheckin == 1 ]; then
+# Test to see if we need to create a repo for precommit
+    git rev-parse --git-dir >/dev/null 2>&1
+    if [ "$autogit" == "1" ] && [ $? != 0 ]; then
+      git init -q
+    fi
+
+# Test again to see if we created one
+    git rev-parse --git-dir >/dev/null 2>&1
+# If precommit=1, check in the file before editing it
+     if [ $? == 0 ] && [ $precommit == 1 ]; then
 # Make sure the file isn't already there first
-  git ls-files $filename --error-unmatch >/dev/null 2>&1
-  if [ $? != 0 ]; then
-    git add $filename >/dev/null 2>&1
-    git commit -q -m "Pre-edit commit of file" >/dev/null 2>&1
+       git ls-files $filename --error-unmatch >/dev/null 2>&1
+       if [ $? != 0 ]; then
+         git add $filename >/dev/null 2>&1
+         git commit -q -m "Pre-edit commit of file $file" >/dev/null 2>&1
+       fi
+     fi
   fi
- fi
-exit
+}
+
 # Go back to our original path for now
 cd $pwd
 
@@ -93,9 +103,11 @@ if [ -h "$file" ]; then
   echo "$file is a directory, aborting.."
   exit
  else
+  precommit
   $editor "$file"
  fi
 else
+ precommit
  $editor "$file"
 fi
 
@@ -133,6 +145,10 @@ function readcommit
 
 # Now go back to the files full path to test for a git repo
 cd $dir
+
+# TODO:  This is goofy
+git rev-parse --git-dir >/dev/null 2>&1
+headrc=$?
 
 # Is there is a git repo here?
 if [ $headrc == 0 ]; then
