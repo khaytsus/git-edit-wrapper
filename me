@@ -67,6 +67,7 @@ touch $filetest >/dev/null 2>&1
 rc=$?
 if [ $rc != 0 ]; then
         echo "Could not create $file (no permissions?)  Using more instead"
+	echo ""
 	more $file
 	exit
 fi
@@ -117,18 +118,18 @@ if [ ! -f "$file" ]; then
   cleanup
 fi
 
+# Exit if we didn't change the file at all
+new_md5=`md5sum $originalfile`
+if [ "$md5" == "$new_md5" ]; then
+  cleanup
+fi
+
 # If using selinux, restore our contexts
 if [ -f "$getenforce" ]; then
   if $getenforce | grep -q 'Enforcing\|Permissive'
   then
    $restorecon "$file"
   fi
-fi
-
-# Exit if we didn't change the file at all
-new_md5=`md5sum $originalfile`
-if [ "$md5" == "$new_md5" ]; then
-  cleanup
 fi
 
 # Ask user for commit note, otherwise default to something
@@ -147,12 +148,11 @@ function readcommit
 # Now go back to the files full path to test for a git repo
 cd $dir
 
-# TODO:  This is goofy
+# Check again to see if we have a repo
 git rev-parse --git-dir >/dev/null 2>&1
-headrc=$?
 
 # Is there is a git repo here?
-if [ $headrc == 0 ]; then
+if [ $?== 0 ]; then
   readcommit
 else
   if [ "$autogit" = "1" ]; then
