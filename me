@@ -26,6 +26,7 @@ autogit=1
 
 # If you want the script to check in a file before editing if it already
 # exists, set this to 1
+
 precommit=1
 
 ### No touchy below here
@@ -77,26 +78,23 @@ function precommit
   cd $dir
 
 # If the file exists, see if we need to check it in before editing
-  if [ -f "$file" ]; then
+  if [ -f "$file" ] && [ $precommit == 1 ]; then
+
+# Get our original md5sum to test
     md5=`md5sum $originalfile`
 
-# Test to see if we need to create a repo for precommit
+# Test to see if we can and need to create a repo for precommit
     git rev-parse --git-dir >/dev/null 2>&1
     if [ "$autogit" == "1" ] && [ $? != 0 ]; then
       git init -q
     fi
 
-# Test again to see if we created one
+# Test again to see if we created a repo
     git rev-parse --git-dir >/dev/null 2>&1
-# If precommit=1, check in the file before editing it
-     if [ $? == 0 ] && [ $precommit == 1 ]; then
-# Make sure the file isn't already there first
-       git ls-files $filename --error-unmatch >/dev/null 2>&1
-       if [ $? != 0 ]; then
-         git add $filename >/dev/null 2>&1
-         git commit -q -m "Pre-edit commit of file $file" >/dev/null 2>&1
-       fi
-     fi
+    if [ $? == 0 ]; then
+      git add $filename >/dev/null 2>&1
+      git commit -q -m "Pre-edit commit of file $file" >/dev/null 2>&1
+    fi
   fi
 }
 
@@ -152,7 +150,7 @@ cd $dir
 git rev-parse --git-dir >/dev/null 2>&1
 
 # Is there is a git repo here?
-if [ $?== 0 ]; then
+if [ $? == 0 ]; then
   readcommit
 else
   if [ "$autogit" = "1" ]; then
