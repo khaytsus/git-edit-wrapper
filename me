@@ -164,7 +164,7 @@ if [ $? == 0 ]; then
   readcommit
 else
   if [ "$autogit" == "1" ]; then
-    echo "Creating new git repo in" `readlink -f $pwd`
+    echo "Creating new git repo in $dir"
     git init -q
     readcommit
   else
