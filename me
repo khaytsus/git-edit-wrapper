@@ -140,23 +140,20 @@ $editor "$file"
 if [ ! -f "$file" ]; then
   cleanup
 fi
-echo "hi"
+
 # Exit if we didn't change the file at all, use git to determine if possible
 if [ "$precommit" == "1" ] && [ "$checksum" == "" ]; then
-# TODO:  Find a better way to test this, ugh
   git rev-parse --git-dir >/dev/null 2>&1
   if [ $? == 0 ]; then
+# TODO:  Find a better way to test this, ugh
     gittest=`git ls-files -m $dir/$filename`
     if [ "$gittest" == "" ]; then
-echo "git clean"
       cleanup
     fi
   fi
 else
-echo "here"
   new_checksum=`md5sum $originalfile`
   if [ "$checksum" == "$new_checksum" ]; then
-echo "md5 clean"
     cleanup
   fi
 fi
