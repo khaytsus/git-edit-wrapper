@@ -23,12 +23,12 @@ getenforce=/usr/sbin/getenforce
 # If you want the script to automatically create a git repo if one does not
 # already exist, set this to 1
 
-autogit=1
+autogit=0
 
 # If you want the script to check in a file before editing if it already
 # exists, set this to 1
 
-precommit=1
+precommit=0
 
 ### No touchy below here
 
@@ -52,6 +52,7 @@ dir=`dirname $file`
 filename=`basename $file`
 pwd=`pwd`
 pwd=`readlink -f $pwd`
+checksum=""
 
 # Create a lock file to test
 filetest=$dir/.${filename}.lock
