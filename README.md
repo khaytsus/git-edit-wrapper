@@ -5,9 +5,27 @@ A simple bash script that wraps around your editor of choice to automate git com
 
 This should work with any command line editor (uemacs, em, vi, emacs, joe, etc) and does the following..
 
-Using md5sum to see if the file has changed at all, we then look to see if there is an available git
-repo to check the file into.  If not and autogit is set to 1, we create a git repo.  We then do git add
-and prmopt the user for a commit message.
+If precommit is set to 1 and there is a git repo or autogit=1, we check in existing files into the git
+repo before we start editing so we have immediate change history.
+
+Then using git if possible or falling back on md5sum the script checks to see if the file has changed at
+all, we then look to see if there is an available git repo to check the file into.  If not and autogit is
+set to 1, we create a git repo.  We then do git add and prmopt the user for a commit message.
+
+Configuration..
+
+editor=/path/to/your/favorite/editor
+pager=/path/to/your/favorite/pager
+
+restorecon=/path/to/restorecon (if using selinux)
+getenforce/path/to/getenforce (if using selinux)
+
+autogit=1 (If you want it to automatically create a repo if one does not yet exist)
+
+precommit=1 (If you want it to commit the original file before editing if a repo exists or can be created (autogit=1)
+
+autogit and precommit are independent options, however precommit cannot check in a file before editing if autogit
+is not set to 1 and there isn't an existing repo.
 
 Hope it's useful to someone!
 
