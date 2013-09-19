@@ -15,9 +15,11 @@ set to 1, we create a git repo.  We then do git add and prmopt the user for a co
 Configuration..
 
 editor=/path/to/your/favorite/editor
+
 pager=/path/to/your/favorite/pager
 
 restorecon=/path/to/restorecon (if using selinux)
+
 getenforce/path/to/getenforce (if using selinux)
 
 autogit=1 (If you want it to automatically create a repo if one does not yet exist)
