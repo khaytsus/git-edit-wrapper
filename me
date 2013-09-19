@@ -84,13 +84,11 @@ fi
 function precommit
 {
 # Need to be in the files path to test for a repo
+  gitchecksum=0
   cd $dir
 
 # If the file exists, see if we need to check it in before editing
   if [ -f "$file" ] && [ "$precommit" == "1" ]; then
-
-# Get our original md5sum to test
-    md5=`md5sum $originalfile`
 
 # Test to see if we can and need to create a repo for precommit
     git rev-parse --git-dir >/dev/null 2>&1
@@ -103,8 +101,15 @@ function precommit
     if [ $? == 0 ]; then
       git add $filename >/dev/null 2>&1
       git commit -q -m "Pre-edit commit of file $file" >/dev/null 2>&1
+      gitchecksum=1
     fi
   fi
+
+  if [ "$gitchecksum" != 1 ]; then
+# We can't use git to test, so we need a checksum to see if we edit the file
+    checksum=`md5sum $originalfile`
+  fi
+
 }
 
 # Ask user for commit note, otherwise default to something
@@ -139,10 +144,18 @@ if [ ! -f "$file" ]; then
   cleanup
 fi
 
-# Exit if we didn't change the file at all
-new_md5=`md5sum $originalfile`
-if [ "$md5" == "$new_md5" ]; then
-  cleanup
+# Exit if we didn't change the file at all, use git to determine if possible
+if [ "$precommit" == "1" ] && [ "$checksum" == "" ]; then
+# TODO:  Find a better way to test this, ugh
+  gittest=`git ls-files -m $dir/$filename`
+  if [ "$gittest" == "" ]; then
+    cleanup
+  fi
+else
+  new_checksum=`md5sum $originalfile`
+  if [ "$checksum" == "$new_checksum" ]; then
+    cleanup
+  fi
 fi
 
 # If using selinux, restore our contexts
