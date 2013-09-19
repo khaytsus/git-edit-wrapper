@@ -10,8 +10,9 @@
 # that repo instead.  Example:  cd $HOME ; git init
 
 # Change the editor to your intended editor..  vi, emacs, joe, whatever
-
+# and update pager if you want to view files you can't edit
 editor=/usr/local/bin/me-bin
+pager=/usr/bin/more
 
 # If using selinux, make sure these are set to the correct path, otherwise
 # you can set them blank to disable the selinux handling
@@ -46,9 +47,6 @@ fi
 
 # Use readlink so we're editing the original file if a symlink as some editors
 # clobber symlinks
-
-# If the file is in a git repo, check in the change
-# If autogit is set to 1, we automatically create the repo
 file=`readlink -f $file`
 dir=`dirname $file`
 filename=`basename $file`
@@ -56,7 +54,6 @@ pwd=`pwd`
 pwd=`readlink -f $pwd`
 
 # Create a lock file to test
-
 filetest=$dir/.${filename}.lock
 
 if [ -f $filetest ]; then
@@ -69,9 +66,9 @@ touch $filetest >/dev/null 2>&1
 rc=$?
 if [ $rc != 0 ]; then
   if [ -f $file ]; then
-    echo "Could not create $file (no permissions?)  Using more instead"
+    echo "Could not create $file (no permissions?)  Viewing instead"
     echo ""
-    more $file
+    $pager $file
     exit
   else
     echo "Could not create $file (no permissions?)"
@@ -143,17 +140,23 @@ $editor "$file"
 if [ ! -f "$file" ]; then
   cleanup
 fi
-
+echo "hi"
 # Exit if we didn't change the file at all, use git to determine if possible
 if [ "$precommit" == "1" ] && [ "$checksum" == "" ]; then
 # TODO:  Find a better way to test this, ugh
-  gittest=`git ls-files -m $dir/$filename`
-  if [ "$gittest" == "" ]; then
-    cleanup
+  git rev-parse --git-dir >/dev/null 2>&1
+  if [ $? == 0 ]; then
+    gittest=`git ls-files -m $dir/$filename`
+    if [ "$gittest" == "" ]; then
+echo "git clean"
+      cleanup
+    fi
   fi
 else
+echo "here"
   new_checksum=`md5sum $originalfile`
   if [ "$checksum" == "$new_checksum" ]; then
+echo "md5 clean"
     cleanup
   fi
 fi
