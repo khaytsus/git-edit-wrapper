@@ -45,31 +45,53 @@ if [ -d "$file" ]; then
  exit
 fi
 
+# Clean up our lock file and exit
+function cleanup
+{
+   rm "$filetest"
+   exit
+}
+
+function sigint
+{
+  echo -e "\nCaught interrupt, cleaning up"
+  cleanup
+}
+
+trap sigint SIGINT
+
 # Use readlink so we're editing the original file if a symlink as some editors
 # clobber symlinks
-file=`readlink -f $file`
-dir=`dirname $file`
-filename=`basename $file`
+file=`readlink -f "$file"`
+dir=`dirname "$file"`
+originaldir=`dirname "$originalfile"`
+filename=`basename "$file"`
 pwd=`pwd`
-pwd=`readlink -f $pwd`
-checksum=""
+pwd=`readlink -f "$pwd"`
+checksum="cleared-after-git"
 
 # Create a lock file to test
 filetest=$dir/.${filename}.lock
 
-if [ -f $filetest ]; then
+if [ -f "$filetest" ]; then
   echo "A lock file exists:  $filetest"
   exit
 fi
 
+if [ ! -d "$originaldir" ]; then
+  echo "Directory $originaldir does not exist, aborting.."
+  exit
+fi
+
 # Test if we can write to this location/file and create a lock file
-touch $filetest >/dev/null 2>&1
+touch "$filetest" >/dev/null 2>&1
 rc=$?
+echo rc: [$rc]
 if [ $rc != 0 ]; then
-  if [ -f $file ]; then
+  if [ -f "$file" ]; then
     echo "Could not create $file (no permissions?)  Viewing instead"
     echo ""
-    $pager $file
+    $pager "$file"
     exit
   else
     echo "Could not create $file (no permissions?)"
@@ -83,7 +105,7 @@ function precommit
 {
 # Need to be in the files path to test for a repo
   gitchecksum=0
-  cd $dir
+  cd "$dir"
 
 # If the file exists, see if we need to check it in before editing
   if [ -f "$file" ] && [ "$precommit" == "1" ]; then
@@ -97,24 +119,24 @@ function precommit
 # Test again to see if we created a repo
     git rev-parse --git-dir >/dev/null 2>&1
     if [ $? == 0 ]; then
-      git add $filename >/dev/null 2>&1
+      git add "$filename" >/dev/null 2>&1
       git commit -q -m "Pre-edit commit of file $file" >/dev/null 2>&1
       gitchecksum=1
+      checksum=""
     fi
   fi
 
-  if [ "$gitchecksum" != 1 ]; then
+  if [ -f "$file" ] && [ "$gitchecksum" != 1 ]; then
 # We can't use git to test, so we need a checksum to see if we edit the file
-    checksum=`md5sum $originalfile`
+    checksum=`md5sum "$dir/$filename"`
   fi
-
 }
 
 # Ask user for commit note, otherwise default to something
 function readcommit
 {
   gitdir=`git rev-parse --git-dir`
-  git add $filename
+  git add "$filename"
   echo -n "[$gitdir] message: "
   read commit
   if [ "$commit" == "" ]; then
@@ -126,12 +148,12 @@ function readcommit
 # Clean up our lock file and exit
 function cleanup
 {
-   rm $filetest
+   rm "$filetest"
    exit
 }
 
 # Go back to our original path
-cd $pwd
+cd "$pwd"
 
 # Edit the file, but commit it first if we should
 precommit
@@ -147,13 +169,13 @@ if [ "$precommit" == "1" ] && [ "$checksum" == "" ]; then
   git rev-parse --git-dir >/dev/null 2>&1
   if [ $? == 0 ]; then
 # TODO:  Find a better way to test this, ugh
-    gittest=`git ls-files -m $dir/$filename`
+    gittest=`git ls-files -m "$dir/$filename"`
     if [ "$gittest" == "" ]; then
       cleanup
     fi
   fi
 else
-  new_checksum=`md5sum $originalfile`
+  new_checksum=`md5sum "$dir/$filename"`
   if [ "$checksum" == "$new_checksum" ]; then
     cleanup
   fi
@@ -168,7 +190,7 @@ if [ -f "$getenforce" ]; then
 fi
 
 # Now go back to the files full path to test for a git repo
-cd $dir
+cd "$dir"
 
 # Check again to see if we have a repo
 git rev-parse --git-dir >/dev/null 2>&1
@@ -183,7 +205,7 @@ else
     readcommit
   else
 # If autogit=0, offer easy way to add file to a new repo
-    echo "cd $dir && git init && git add $filename && git commit -m \"Adding $filename\" && cd $pwd"
+    echo "cd \"$dir\" && git init && git add \"$filename\" && git commit -m \"Adding $filename\" && cd $pwd"
   fi
 fi
 
