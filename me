@@ -86,7 +86,6 @@ fi
 # Test if we can write to this location/file and create a lock file
 touch "$filetest" >/dev/null 2>&1
 rc=$?
-echo rc: [$rc]
 if [ $rc != 0 ]; then
   if [ -f "$file" ]; then
     echo "Could not create $file (no permissions?)  Viewing instead"
