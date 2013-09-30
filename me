@@ -30,6 +30,10 @@ autogit=1
 
 precommit=1
 
+# If you want the script to bail out on a binary file, set this to 1
+
+nobinary=1
+
 ### No touchy below here
 
 file=$1
@@ -43,6 +47,15 @@ fi
 if [ -d "$file" ]; then
  echo "$file is a directory, aborting.."
  exit
+fi
+
+if [ "$nobinary" == "1" ]; then
+  magic=`file -i "$file"`
+  if grep -q binary <<< $magic
+  then
+    echo "Binary file found, aborting.."
+    exit
+  fi
 fi
 
 # Clean up our lock file and exit

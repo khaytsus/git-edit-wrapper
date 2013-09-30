@@ -29,6 +29,8 @@ precommit=1 (If you want it to commit the original file before editing if a repo
 autogit and precommit are independent options, however precommit cannot check in a file before editing if autogit
 is not set to 1 and there isn't an existing repo.
 
+nobinary=1 (fail if we detect a binary file)
+
 Hope it's useful to someone!
 
 History..
