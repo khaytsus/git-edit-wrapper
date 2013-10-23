@@ -50,3 +50,7 @@ was forced to, so I added git logic to my wrapper script.
 I've since cleaned it up a little, made it a little less "uemacs-centric" (even though the original
 name remains; 'me') and added some configurability for if using SELinux, to automatically create a
 git repo, etc.
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/khaytsus/git-edit-wrapper/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
