@@ -39,6 +39,10 @@ nobinary=1
 file=$1
 originalfile=$file
 
+# Use readlink so we're editing the original file if a symlink as some editors
+# clobber symlinks
+file=`readlink -f "$file"`
+
 if [ "$file" == "" ]; then
  $editor
  exit
@@ -77,9 +81,6 @@ function sigint
 
 trap sigint SIGINT
 
-# Use readlink so we're editing the original file if a symlink as some editors
-# clobber symlinks
-file=`readlink -f "$file"`
 dir=`dirname "$file"`
 originaldir=`dirname "$originalfile"`
 filename=`basename "$file"`
