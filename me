@@ -11,7 +11,7 @@
 
 # Change the editor to your intended editor..  vi, emacs, joe, whatever
 # and update pager if you want to view files you can't edit
-editor=/usr/local/bin/me-bin
+editor=/usr/local/bin/em
 pager=/usr/bin/more
 
 # If using selinux, make sure these are set to the correct path, otherwise
@@ -38,6 +38,10 @@ nobinary=1
 
 file=$1
 originalfile=$file
+
+# Use readlink so we're editing the original file if a symlink as some editors
+# clobber symlinks
+file=`readlink -f "$file"`
 
 if [ "$file" == "" ]; then
  $editor
@@ -77,9 +81,6 @@ function sigint
 
 trap sigint SIGINT
 
-# Use readlink so we're editing the original file if a symlink as some editors
-# clobber symlinks
-file=`readlink -f "$file"`
 dir=`dirname "$file"`
 originaldir=`dirname "$originalfile"`
 filename=`basename "$file"`
