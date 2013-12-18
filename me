@@ -11,7 +11,7 @@
 
 # Change the editor to your intended editor..  vi, emacs, joe, whatever
 # and update pager if you want to view files you can't edit
-editor=/usr/local/bin/em
+editor=/usr/local/bin/me-bin
 pager=/usr/bin/more
 
 # If using selinux, make sure these are set to the correct path, otherwise
@@ -33,6 +33,12 @@ precommit=1
 # If you want the script to bail out on a binary file, set this to 1
 
 nobinary=1
+
+# If you do not want to do per-save commits when using a git from remote, such
+# as code checked-out from github, set this to 1.  Otherwise editing four files
+# would have four commits, need to squash etc, messy
+
+checkremote=1
 
 ### No touchy below here
 
@@ -159,15 +165,25 @@ function readcommit
 {
   gitdir=`git rev-parse --git-dir`
   if [ $precommitted == 1 ]; then
-    git commit -q -m "Pre-edit commit of file $file" >/dev/null 2>&1
+    if [ $checkremote == 1 ] && [ "$remoteorigin" == "" ]; then
+      git commit -q -m "Pre-edit commit of file $file" >/dev/null 2>&1
+    fi
   fi
   git add "$filename"
-  echo -n "[$gitdir] message: "
-  read commit
-  if [ "$commit" == "" ]; then
-    commit="Automatic edit script commit"
+
+  if [ $checkremote == 1 ] && [ "$remoteorigin" == "" ]; then
+    echo -n "[$gitdir] message: "
+    read commit
+    if [ "$commit" == "" ]; then
+      commit="Automatic edit script commit"
+    fi
   fi
-  git commit -q -m "$commit"
+
+  if [ $checkremote == 1 ] && [ "$remoteorigin" == "" ]; then
+    git commit -q -m "$commit"
+  else
+    echo "Added; not committing automatically for remote git repo"
+  fi
 }
 
 # Go back to our original path
@@ -212,6 +228,9 @@ fi
 
 # Now go back to the files full path to test for a git repo
 cd "$dir"
+
+# See if we have a remote repo
+remoteorigin=`git config --get remote.origin.url`
 
 # Check again to see if we have a repo
 git rev-parse --git-dir >/dev/null 2>&1
